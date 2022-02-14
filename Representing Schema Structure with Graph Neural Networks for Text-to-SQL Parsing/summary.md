@@ -18,7 +18,7 @@
   $$
   $\mathcal{V}_{\tau}$是类型为$\tau$的schema items的集合，$s_{\rm{link}}(\empty, \cdot) = 0$是为不link任何schema item的单词而准备。
   
-* Encoder
+* Encoder（Basic）
 
   一个双向LSTM为每个单词$x_i$提供一个上下文表示$h_i$，双向LSTM第$i$位的输入为$[w_{x_i}; l_i]$，其中$w_{x_i}$为$x_i$的word embedding，
   $$
@@ -26,7 +26,7 @@
   $$
   $r_v$是关于$v$的一个可学习embedding，基于$v$的类型和它的schema neighbors。
 
-* Decoder
+* Decoder（Basic）
 
   ![decoder](asset/decoder.png)
 
@@ -50,3 +50,55 @@
 
 ##### 编码分析
 
+* Schema-to-Graph
+
+  ![graph](asset/graph.png)
+
+  把schema转换成一张图，定义图的节点为所有schema items，然后添加三种边：
+
+  * 对于表$t$中的列$c_t$，将边$(c_t, t)$和$(t, c_t)$添加至边集$\mathcal{E}_{\leftrightarrow}$；
+  * 对于外键关系$(c_{t_1}, c_{t_2})$，将边$(c_{t_1}, c_{t_2})$和$(t_1, t_2)$添加至边集$\mathcal{E}_{\rightarrow}$，将边$(c_{t_2}, c_{t_1})$和$(t_2, t_1)$添加至边集$\mathcal{E}_{\leftarrow}$。
+
+* Question-Conditioned Relevance
+
+  在问题条件下，部分schema是无关的，例如上图中只有橙色的点与问题有关。对于schema item $v$，定义其相关分数
+  $$
+  \rho_v = \max_i p_{\rm{link}}(v | x_i)
+  $$
+
+* Neural Graph Representation
+
+  定义节点$v$的初始embedding为$h_v^{(0)} = r_v \cdot \rho_v$，然后执行$L$步GNN循环，
+  $$
+  \begin{aligned}
+  a_v^{(l)} & = \sum_{\rm{type} \in \{\rightarrow, \leftrightarrow\}} \sum_{(u, v) \in \mathcal{E}_{\rm{type}}} W_{\rm{type}} h_u^{(l - 1)} + b_{\rm{type}} \\
+  h_v^{(l)} & = \rm{GRU}(h_v^{(l - 1)}, a_v^{(l)})
+  \end{aligned}
+  $$
+  最终表示为$\varphi_v = h_v^{(L)}$。
+
+##### 模型修改
+
+* Encoder（Final）
+
+  替换前述$l_i$为
+  $$
+  l_i^{\varphi} = \sum_{\tau} \sum_{v \in \mathcal{V}_{\tau}} p_{\rm{link}}(v | x_i) \cdot \varphi_v
+  $$
+
+* Decoder（Final）
+
+  对于解码时LSTM的输入，前述（Basic）中提到，如果schema item $v$被解码，那么下一步的输入为$\tau(v)$对应的embedding，此处则替换为$\varphi_v$。已生成的schema item会对后续有影响，所以需要增加self-attention机制。对于解码的第$j$步，令$u_j$为decoder的hidden state，$\hat{J} = (i_1, \cdots, i_{|\hat{J}|})$为先前解码出schema item的时间步，$\hat{U}_{d \times |\hat{J}|} = [u_{i_1}, \cdots, u_{i_{|\hat{J}|}}]$。
+  $$
+  \begin{aligned}
+  \hat{a}_j & = \rm{softmax}(\hat{U}^T u_j) \\
+  s_j^{\rm{att}} & = \hat{a}_j S^{\rm{att}} \\
+  p_j & = \rm{softmax}([s_j^{\rm{glob}}; s_j^{\rm{loc}} + s_j^{\rm{att}}])
+  \end{aligned}
+  $$
+  $S^{\rm{att}}$是一个$|\hat{J}| \times \mathcal{V}_{\rm{legal}}$的矩阵，$S_{v_1, v_2}^{\rm{att}} = F(\varphi_{v_1})^T F(\varphi_{v_2})$，其中$F(\cdot)$是一个feed-forward网络。
+
+##### 实验结果
+
+* performance达到SOTA。
+* 各个组件（GNN、self-attention、相关分数）均起到重要作用。
