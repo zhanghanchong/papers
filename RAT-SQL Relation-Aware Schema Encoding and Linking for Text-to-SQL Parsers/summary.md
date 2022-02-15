@@ -53,4 +53,52 @@ $$
 
   * Value-Based Linking
 
-    
+    如果问题中单词$q_i$出现在列$c_j$的值（或者是值内的一个完整单词）中，则增加一条新关系COLUMN-VALUE。
+
+* Auxiliary Linking
+
+  对于$x_i, x_j \in \mathcal{V}_Q$：
+
+  * 若$i = j$，则增加COLUMN-IDENTITY或TABLE-IDENTITY；
+  * 若$x_i, x_j \in Q$，则增加QUESTION-DIST-$d$，其中$d = \rm{clip}(j - i, D)$；
+  * 否则增加COLUMN-COLUMN、COLUMN-TABLE、TABLE-COLUMN、TABLE-TABLE之一。
+
+* Memory-Schema Alignment Matrix
+
+  直观上出现在SQL语句中的column和table会在问题中有对应，因此计算矩阵$L^{\rm{col}} \in \R^{|y| \times |\mathcal{C}|}$和$L^{\rm{tab}} \in \R^{|y| \times |\mathcal{T}|}$。
+  $$
+  \begin{aligned}
+  \tilde{L}_{i, j}^{\rm{col}} & = \frac{y_i W_Q^{\rm{col}} (c_j^{\rm{final}} W_K^{\rm{col}} + r_{i j}^K)^T}{\sqrt{d_x}} \\
+  \tilde{L}_{i, j}^{\rm{tab}} & = \frac{y_i W_Q^{\rm{tab}} (t_j^{\rm{final}} W_K^{\rm{tab}} + r_{i j}^K)^T}{\sqrt{d_x}} \\
+  L_i^{\rm{col}} & = \rm{softmax}(\tilde{L}_i^{\rm{col}}) \\
+  L_i^{\rm{tab}} & = \rm{softmax}(\tilde{L}_i^{\rm{tab}})
+  \end{aligned}
+  $$
+  使用交叉熵损失函数进行优化，
+  $$
+  align\_loss = - \frac{1}{|Rel(\mathcal{C})|} \sum_{j \in Rel(\mathcal{C})} \log \max_i L_{i, j}^{\rm{col}} - \frac{1}{|Rel(\mathcal{T})|} \sum_{j \in Rel(\mathcal{T})} \log \max_i L_{i, j}^{\rm{tab}}
+  $$
+  $Rel(\mathcal{C})$和$Rel(\mathcal{T})$分别代表出现在SQL语句中的column和table的集合。实验表明，这项优化会使performance有略微提升，但没有显著提升。
+
+* 解码
+
+  使用LSTM生成抽象语法树，每一步或扩展最后生成的节点至一条语法规则（APPLYRULE），或从schema中选择一项column或table（SELECTCOLUMN，SELECTTABLE）。
+  $$
+  m_t, h_t = f_{\rm{LSTM}}([a_{t - 1} || z_t || h_{p_t} || a_{p_t} || n_{f_t}], m_{t - 1}, h_{t - 1})
+  $$
+  $m_t$为LSTM cell state，$h_t$为LSTM output，$a_{t - 1}$为上一个动作的embedding，$p_t$为当前时间步对应的父节点，$n_{f_t}$为当前节点类型的embedding，$z_t$为$h_{t - 1}$对encoder结果的multi-head attention上下文表示。对于APPLYRULE[R]，
+  $$
+  \rm{Pr}(a_t = APPLYRULE[R] | a_{< t}, y) = \rm{softmax}(g(h_t))
+  $$
+  $g(\cdot)$为一个2层的MLP，具有一个$\tanh$非线性。对于SELECTCOLUMN，
+  $$
+  \begin{aligned}
+  \tilde{\lambda}_j & = \frac{h_t W_Q^{\rm{sc}} (y_j W_K^{\rm{sc}})^T}{\sqrt{d_x}} \\
+  \lambda & = \rm{softmax}(\tilde{\lambda}) \\
+  \rm{Pr}[a_t = SELECTCOLUMN[i] | a_{< t}, y] & = \sum_{j = 1}^{|y|} \lambda_j L_{j, i}^{\rm{col}}
+  \end{aligned}
+  $$
+  对于SELECTTABLE则类似。
+
+##### 实验结果
+
