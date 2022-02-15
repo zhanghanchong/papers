@@ -102,3 +102,8 @@ $$
 
 ##### 实验结果
 
+* 在Spider数据集上performance达到SOTA，而且泛化能力较强，dev和test测试差距较小。
+* RAT-SQL+BERT有助于提升performance和泛化能力。
+* schema linking relations、schema graph relations、value-based linking均起到重要作用。
+* 在WikiSQL数据集上没有达到SOTA，但performance仍然competitive，原因在于RAT-SQL对于value decoding做了简化，仅为token-based pointer机制，即只能解码单个token的value。
+* 在错误的预测中，结构错误和column或table错误占比均较高，均需要未来工作。
