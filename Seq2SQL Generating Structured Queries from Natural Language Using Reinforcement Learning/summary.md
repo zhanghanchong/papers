@@ -20,7 +20,7 @@
 
   假设一个表有$N$列，第$j$列的列名为$x_j^c = [x_{j, 1}^c, x_{j, 2}^c, \cdots, x_{j, T_j}^c]$，问题单词序列为$x^q$，SQL关键字词汇序列为$x^s$，于是输入序列为
   $$
-  x = [<\rm{col}>; x_1^c; x_2^c; \cdots; x_N^c; <\rm{sql}>; x^s; <\rm{question}>; x^q]
+  x = [\langle \rm{col} \rangle; x_1^c; x_2^c; \cdots; x_N^c; \langle \rm{sql} \rangle; x^s; \langle \rm{question} \rangle; x^q]
   $$
 
 * 编码器
