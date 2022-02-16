@@ -134,3 +134,7 @@ LGESQL整体包含graph input module、line graph enhanced hidden module、graph
 
 ##### 实验结果
 
+* 在各种条件下performance均达到SOTA。
+* 使用BERT效果比GLOVE好，使用适配任务的ELECTRA效果比BERT更好。
+* 相比于RAT-SQL，LGESQL明显更好地利用了schema的结构信息。
+* mixed static and dynamic embeddings和multi-head multi-view concatenation表现差不多，线图、non-local关系、graph pruning均起作用。
