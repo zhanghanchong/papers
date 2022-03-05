@@ -38,3 +38,7 @@ $$
 
 ##### 实验结果
 
+* performance在ACM、DBLP、IMDB三个数据集上达到SOTA。
+* 节点和语义上的注意力机制各自均起到作用。
+* 聚类效果明显优于针对homogeneous图或者单一meta-path的模型。
+* $Z$和$q$的embedding维度适中为好，注意力的效果整体随着head数量增加而提升。
