@@ -21,7 +21,7 @@ $$
 
 ##### 问题生成模型
 
-随机采样SQL查询语句$x$，然后使用问题生成模型获取对应的问题，进行数据扩增。编码器使用双向GRU对SQL查询语句进行编码，第$i$个单词的编码向量为$h_i$，拼接双向最终hidden states作为解码器GRU的初始hidden state。在解码器中，对于第$t$个时间步，$s_t$为hidden state，$c_t$为根据注意力机制得到的上下文向量，$y_{t - 1}$为上一个预测单词的embedding。
+随机采样SQL查询语句$x$，然后使用问题生成模型获取对应的问题，进行数据扩增。编码器使用双向GRU对SQL查询语句进行编码，第$i$个单词的编码向量为$h_i$，拼接双向最终hidden states得到$h_x$，以此作为解码器GRU的初始hidden state。在解码器中，对于第$t$个时间步，$s_t$为hidden state，$c_t$为根据注意力机制得到的上下文向量，$y_{t - 1}$为上一个预测单词的embedding。
 $$
 s_t = GRU(s_{t - 1}, y_{t - 1}, c_t)
 $$
@@ -33,5 +33,20 @@ p(y_t | y_{< t}, x) & = \frac{e^{\psi_g(y_t)} + e^{\psi_c(y_t)}}{\sum_{v \in \ma
 \psi_c(y_i) & = \tanh(h_i^T W_c) s_t
 \end{aligned}
 $$
-其中$v_i$为one-hot向量。
+其中$v_i$为one-hot向量。为了使得生成的问题语句具备多样性，模型中使用latent variable $z \sim \mathcal{N}(0, I_n)$，且在后验分布中，
 
+$$
+\begin{aligned}
+\mu & = W_{\mu} [h_x; h_y] + b_{\mu} \\
+\log(\sigma^2) & = W_{\sigma} [h_x; h_y] + b_{\sigma} \\
+D_{KL}(Q(z | x, y) || p(z)) & = - \frac{1}{2} \sum_{j = 1}^n (1 + \log(\sigma_j^2) - \mu_j^2 - \sigma_j^2)
+\end{aligned}
+$$
+其中$h_x$和$h_y$分别是source和target的编码结果，拼接$h_x$和$z$作为解码器的初始hidden state。由于模型会倾向于迫使KL散度为0，因此在训练时针对KL散度乘以一个变化的权值。
+
+##### 实验结果
+
+* 模型性能与数据规模的对数成正比。
+* 数据扩增明显提升了模型性能。
+* 引入latent variable有利于提升扩增数据的质量和多样性。
+* 扩增数据中，大约27%的问题语句错误地表达了对应的SQL语句的含义，其中大部分遗漏了WHERE子句中的信息。其余73%的数据样例可以从两个方向考虑优化，一个是令问题生成模型考虑诸如列类型的更多表信息，一个是向问题生成模型中加入常识。
