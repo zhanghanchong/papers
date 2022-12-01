@@ -123,7 +123,7 @@ SeSQL的构建主要包含五步：数据库收集和清理，初始SQL查询创
 
   ![thematic_transition_statistic](assets/thematic_transition_statistic.png)
 
-  最多的是changing conditions和changing select，这种情形下下轮SQL会查询另一个相关的主题，对应的问题通常上下文无关。最少的是changing tables和changing queries，这种情形下通常会是下轮SQL非常复杂。
+  最多的是changing conditions和changing select，它们也是对话问答系统中常见的两种上下文主题关系。最少的是changing tables和changing queries，前者会使下轮SQL查询另一个相关的主题，对应的问题通常上下文无关，后者通常会使下轮SQL非常复杂。
 
 * 上下文依赖
 
