@@ -1,4 +1,4 @@
-#### QURG Question Rewriting Guided Context-Dependent Text-to-SQL Semantic Parsing
+#### QURG: Question Rewriting Guided Context-Dependent Text-to-SQL Semantic Parsing
 
 ##### 模型方法
 
